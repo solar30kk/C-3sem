@@ -29,13 +29,76 @@ class Program
     const string Selected = "4FF7FC";
     const string SelectedText = "002383";
 
+    const int ScreenWidth = 80;
+    const int ScreenHeight = 25;
+
     static void Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
+        if (Console.IsOutputRedirected || Console.IsInputRedirected)
+        {
+            Console.WriteLine("Запусти программу в отдельном окне терминала.");
+            return;
+        }
         EnableColors();
-        Console.Write("\u001b[?7l");
-        Console.Clear();
-        Console.CursorVisible = false;
+        int previousWidth = -1;
+        int previousHeight = -1;
+        try
+        {
+            while (true)
+            {
+                int width = Console.WindowWidth;
+                int height = Console.WindowHeight;
+                if (width != previousWidth || height != previousHeight)
+                {
+                    try
+                    {
+                        Console.CursorVisible = false;
+                        Console.Write("\u001b[?7l");
+                        SetColors("FFFFFF", "000000");
+                        Console.Clear();
+                        if (width >= ScreenWidth && height >= ScreenHeight)
+                        {
+                            DrawInterface();
+                            SetColors("FFFFFF", "000000");
+                            Console.SetCursorPosition(6, 23);
+                            Console.Write("\u001b[3 q");
+                            Console.CursorVisible = true;
+                        }
+                        else
+                        {
+                            string message = "Увеличь терминал до 80x25";
+                            int length = Math.Min(message.Length, Math.Max(0, width - 1));
+                            if (length > 0 && height > 0)
+                                WriteAt(0, 0, message.Substring(0, length));
+                        }
+                        previousWidth = width;
+                        previousHeight = height;
+                    }
+                    catch (Exception ex) when (ex is ArgumentOutOfRangeException or IOException)
+                    {
+                        previousWidth = -1;
+                        previousHeight = -1;
+                    }
+                }
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKey key = Console.ReadKey(true).Key;
+                    if (key == ConsoleKey.Escape || key == ConsoleKey.F10) break;
+                }
+                System.Threading.Thread.Sleep(50);
+            }
+        }
+        finally
+        {
+            Console.Write("\u001b[?7h\u001b[0 q\u001b[0m");
+            Console.CursorVisible = true;
+            Console.Clear();
+        }
+    }
+
+    static void DrawInterface()
+    {
         SetColors(Cyan, Blue);
         for (int y = 0; y < 24; y++)
             WriteAt(0, y, new string(' ', 80));
@@ -107,16 +170,6 @@ class Program
             WriteAt(i * 8 + number.Length, 24, keys[i].PadRight(6));
         }
 
-        Console.Write("\u001b[?7h");
-        SetColors("FFFFFF", "000000");
-        Console.SetCursorPosition(6, 23);
-        Console.Write("\u001b[3 q");
-        Console.CursorVisible = true;
-        Console.ReadKey(true);
-        Console.Write("\u001b[0 q"); 
-        Console.Write("\u001b[0m");
-        Console.Clear();
-        Console.CursorVisible = true;
     }
 
     static List<FileItem> CreateLeftFiles()
@@ -249,3 +302,4 @@ class Program
         Console.Write('\u255D');
     }
 }
+
